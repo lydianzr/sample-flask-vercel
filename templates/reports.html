@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Recycler - Reports{% endblock %}
+<!DOCTYPE html>
 
 {% block content %}
 <section class="reports-header">
@@ -9,12 +10,6 @@
 </section>
 
 <section class="report-options">
-    <div class="report-card">
-        <h3>Classification Summary</h3>
-        <p>Overview of all classifications by category with percentages.</p>
-        <button class="btn primary">Generate Report</button>
-    </div>
-
     <div class="report-card">
         <h3>Time Analysis</h3>
         <p>Trend analysis showing classification patterns over time.</p>
@@ -28,8 +23,8 @@
     </div>
 
     <div class="report-card">
-        <h3>Full Data Export</h3>
-        <p>Complete export of all classification data in CSV format.</p>
+        <h3>Summary</h3>
+        <p>Overview of all classifications by category with percentages.</p>
         <button class="btn primary">Generate Report</button>
     </div>
 </section>
