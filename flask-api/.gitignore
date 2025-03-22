@@ -1,0 +1,8 @@
+# Ignore Firestore credentials
+flask-api/serviceAccountKey.json
+serviceAccountKey.json
+
+# Python virtual environments
+venv/
+
+
