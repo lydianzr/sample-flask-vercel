@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify  # Import Flask and necessary modules
 import os  # For handling file paths
 from werkzeug.utils import secure_filename  # To securely handle file uploads
-from firestore_db import add_data_to_firestore  # Import Firestore function
+from .firestore_db import add_data_to_firestore  # Import Firestore function
 
 app = Flask(__name__)
 
