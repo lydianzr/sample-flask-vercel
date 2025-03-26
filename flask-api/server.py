@@ -2,36 +2,60 @@ from flask import Flask, request, jsonify  # Import Flask and necessary modules
 import os  # For handling file paths
 from werkzeug.utils import secure_filename  # To securely handle file uploads
 from .firestore_db import add_data_to_firestore  # Import Firestore function
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing import image
+import numpy as np
+import time
+from PIL import Image
+from io import BytesIO
 
 app = Flask(__name__)
 
-# Define the folder to store uploaded files
-UPLOAD_FOLDER = 'static/uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure the folder exists
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER  # Set the upload folder in Flask config
+# Load the trained model
+MODEL_PATH = "TrainedModelRecyclable.keras"
+model = load_model(MODEL_PATH)
+
+@app.route("/predict", methods=["POST"])
+def predict():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["file"]
+    img = Image.open(BytesIO(file.read()))  # Open image from the file object in memory
+
+    # Resize image and preprocess it for the model
+    img = img.resize((224, 224))  # Resize to model's input size
+    img_array = image.img_to_array(img) / 255.0  # Convert image to array and normalize
+    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+
+    # Make prediction
+    predictions = model.predict(img_array)
+    predicted_class = int(predictions[0][0] > 0.5)  # Assuming binary classification
+
+    labels = ["Non-Recyclable", "Recyclable"]
+    result = labels[predicted_class]
+
+    
+    # Prepare data to add to Firestore
+    data = {
+        "prediction": result,
+        "image_name": secure_filename(file.filename),  # You can save the image name as well
+    }
+
+    # Add the prediction data to Firestore
+    doc_id = add_data_to_firestore(data)
+
+    return jsonify({"prediction": result})
+
 
 @app.route('/')
 def home():
     """Default route to check if the API is running"""
     return "Flask API is running!"
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    """Handles file upload to the server"""
-    if 'image' not in request.files:
-        return jsonify({'error': 'No file part'}), 400  # Return error if no file is uploaded
-    
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400  # Return error if no file is selected
 
-    filename = secure_filename(file.filename)  # Secure the filename
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)  # Define file path
-    file.save(file_path)  # Save the file
-
-    return jsonify({'message': 'File uploaded successfully', 'file_path': file_path}), 200  # Return success response
-
-@app.route('/add-data', methods=['POST'])
+@app.route("/add-data", methods=["POST"])
 def add_data():
     """Handles adding JSON data to Firestore"""
     data = request.json  # Get data from request body
@@ -39,7 +63,6 @@ def add_data():
     
     return jsonify({"message": "Data added successfully", "id": doc_id})  # Return success response with document ID
 
-if __name__ == '__main__':
-    # Run the app in debug mode (for development only)
-    # TODO: When deploying, remove debug=True and set up a production WSGI server
-    app.run(debug=True)
+
+if __name__ == "__main__":
+    app.run(debug=True)  # Only ONE instance of app.run()
