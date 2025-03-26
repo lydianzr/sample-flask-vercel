@@ -12,3 +12,4 @@ tensorflow
 numpy
 pandas
 scikit-learn
+Pillow
