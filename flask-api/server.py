@@ -14,7 +14,27 @@ app = Flask(__name__)
 
 # Load the trained model
 MODEL_PATH = "TrainedModelRecyclable.keras"
-model = load_model(MODEL_PATH)
+TFLITE_MODEL_PATH = "TrainedModelRecyclable.tflite"
+
+# Load Keras model (only needed for conversion)
+keras_model = tf.keras.models.load_model(MODEL_PATH)
+
+# Convert to TFLite
+converter = tf.lite.TFLiteConverter.from_keras_model(keras_model)
+tflite_model = converter.convert()
+
+# Save the TFLite model
+with open(TFLITE_MODEL_PATH, "wb") as f:
+    f.write(tflite_model)
+
+# Load TFLite model into an interpreter
+interpreter = tf.lite.Interpreter(model_path=TFLITE_MODEL_PATH)
+interpreter.allocate_tensors()
+
+# Get input and output details
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -26,27 +46,27 @@ def predict():
 
     # Resize image and preprocess it for the model
     img = img.resize((224, 224))  # Resize to model's input size
-    img_array = image.img_to_array(img) / 255.0  # Convert image to array and normalize
+    img_array = np.array(img, dtype=np.float32) / 255.0  # Convert image to NumPy array and normalize
     img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
 
-    # Make prediction
-    predictions = model.predict(img_array)
-    predicted_class = int(predictions[0][0] > 0.5)  # Assuming binary classification
+    interpreter.set_tensor(input_details[0]["index"], img_array)
+    interpreter.invoke()
+    predictions = interpreter.get_tensor(output_details[0]["index"])
 
+    # Assuming binary classification (0 = Non-Recyclable, 1 = Recyclable)
+    predicted_class = int(predictions[0][0] > 0.5)
     labels = ["Non-Recyclable", "Recyclable"]
     result = labels[predicted_class]
 
-    
-    # Prepare data to add to Firestore
+    # Save to Firestore
     data = {
         "prediction": result,
-        "image_name": secure_filename(file.filename),  # You can save the image name as well
+        "image_name": secure_filename(file.filename),
     }
-
-    # Add the prediction data to Firestore
     doc_id = add_data_to_firestore(data)
 
-    return jsonify({"prediction": result})
+    return jsonify({"prediction": result, "doc_id": doc_id})
+
 
 
 @app.route('/')
