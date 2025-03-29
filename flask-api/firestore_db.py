@@ -9,5 +9,5 @@ db = firestore.client()  # Initialize Firestore AFTER Firebase is initialized
 def add_data_to_firestore(data):
     """Saves prediction data to Firestore with an auto-generated document ID"""
     data["timestamp"] = firestore.SERVER_TIMESTAMP  # Add timestamp
-    doc_ref = db.collection("test_collection").add(data)  # Firestore auto-generates ID
+    doc_ref = db.collection("predictions").add(data)  # Firestore auto-generates ID
     return doc_ref.id  # Return the document ID
