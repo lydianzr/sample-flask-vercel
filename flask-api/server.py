@@ -3,8 +3,6 @@ import os  # For handling file paths
 from werkzeug.utils import secure_filename  # To securely handle file uploads
 from .firestore_db import add_data_to_firestore  # Import Firestore function
 import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
 import numpy as np
 import time
 from PIL import Image
@@ -13,19 +11,7 @@ from io import BytesIO
 app = Flask(__name__)
 
 # Load the trained model
-MODEL_PATH = "TrainedModelRecyclable.keras"
 TFLITE_MODEL_PATH = "TrainedModelRecyclable.tflite"
-
-# Load Keras model (only needed for conversion)
-keras_model = tf.keras.models.load_model(MODEL_PATH)
-
-# Convert to TFLite
-converter = tf.lite.TFLiteConverter.from_keras_model(keras_model)
-tflite_model = converter.convert()
-
-# Save the TFLite model
-with open(TFLITE_MODEL_PATH, "wb") as f:
-    f.write(tflite_model)
 
 # Load TFLite model into an interpreter
 interpreter = tf.lite.Interpreter(model_path=TFLITE_MODEL_PATH)
